@@ -40,6 +40,14 @@ KG.timeout = (time) => {
 	});
 }
 
+KG.urlencode = (obj) => {
+	var str = "";
+	for (var i in obj) {
+		str += `${i}=${obj[i]}&`
+	}
+	return str.slice(0, -1); // remove trailing '&'
+}
+
 //returns parsed json or undefined if parse fails
 KG.tryParseJson = (str) => {
 	try {

@@ -20,6 +20,9 @@
 // @connect       googleusercontent.com
 // @connect       googlevideo.com
 // @connect       novelplanet.me
+// @connect       replay.watch
+// @connect       multi.idocdn.com
+// @connect       *
 // ==/UserScript==
 
 if (!unsafeWindow.jQuery) {
@@ -582,6 +585,14 @@ KG.timeout = (time) => {
 	});
 }
 
+KG.urlencode = (obj) => {
+	var str = "";
+	for (var i in obj) {
+		str += `${i}=${obj[i]}&`
+	}
+	return str.slice(0, -1); // remove trailing '&'
+}
+
 //returns parsed json or undefined if parse fails
 KG.tryParseJson = (str) => {
 	try {
@@ -976,6 +987,56 @@ KG.actionAux.nova_getDirect = async (ep) => {
 	}
 	ep.grabLink = "error: preferred qualities not found";
 }
+//#endregion
+
+//#region HydraX
+KG.actions.hydrax_getHls = {
+	name: "get HLS streams",
+	requireLinkType: "embed",
+	servers: ["hydrax"],
+	execute: async (data) => {
+		KG.actionAux.generic_eachEpisode(data, KG.actionAux.hydrax_getHls, () => {
+			//data.linkType = "hls";
+		});
+	},
+}
+
+KG.actionAux.hydrax_getHls = async (ep) => {
+	if (ep.grabLink.slice(0, 5) == "error") {
+		return;
+	}
+	var json = await KG.actionAux.hydrax_getData(ep.grabLink);
+	if (!json) {
+		return;
+	}
+	var quality = json.hd;
+	KG.log(await KG.actionAux.hydrax_convertLink(json.servers.stream, quality.sig, quality.id, quality.ids[0], quality.ids[1]))
+}
+
+KG.actionAux.hydrax_getData = async (url) => {
+	var html = (await KG.get(url)).response;
+	var key = html.match(/key: "(.*?)"/)[1];
+	var type = html.match(/type: "(.*?)"/)[1];
+	var value = url.match(/slug=(\w*)/)[1];
+	var response = await KG.post("https://multi.idocdn.com/vip", KG.urlencode({ key, type, value }), { "Content-Type": "application/x-www-form-urlencoded" })
+
+	var json = KG.tryParseJson(response.response);
+	if (typeof json == "object" && json.status !== false) {
+		return json;
+	}
+	KG.logerr("hydrax vip error:", { status: response.status, parsed: json, response: response });
+}
+
+KG.actionAux.hydrax_convertLink = async (server, sig, id, id1, id2) => {
+	var response = await KG.get(`https://${server}/html/${sig}/${id}/${id1}/${id2}.html`, { "Origin": "https://replay.watch" });
+	if (response.status == 200) {
+		var json = KG.tryParseJson(response.response);
+		if (json && json.url) {
+			return atob(json.url);
+		}
+	}
+}
+
 //#endregion
 
 //#region Generic

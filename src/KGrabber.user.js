@@ -20,6 +20,9 @@
 // @connect       googleusercontent.com
 // @connect       googlevideo.com
 // @connect       novelplanet.me
+// @connect       replay.watch
+// @connect       multi.idocdn.com
+// @connect       *
 // ==/UserScript==
 
 if (!unsafeWindow.jQuery) {
